@@ -37,7 +37,7 @@ public:
         // 1. Ο συνθεσάιζερ παράγει τον αρχικό ήχο στις φωνές
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
         
-        // 2. Επεξεργασία Granular (περνάμε το buffer και το mix)
+        // 2. Επεξεργασία Granular
         engine.granular.set(
             (float)*apvts.getRawParameterValue("grain_position"),
             (float)*apvts.getRawParameterValue("grain_size"), 
@@ -48,8 +48,9 @@ public:
         );
         engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
         
-        // 3. Επεξεργασία Reverse Delay
+        // 3. Επεξεργασία Reverse Delay με τις 3 σωστές παραμέτρους
         engine.reverseDelay.set(
+            (float)*apvts.getRawParameterValue("delay_mix"),
             (float)*apvts.getRawParameterValue("delay_time"), 
             (float)*apvts.getRawParameterValue("delay_feedback")
         ); 
@@ -127,4 +128,3 @@ public:
 };
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ZUMBOAudioProcessor(); }
-
