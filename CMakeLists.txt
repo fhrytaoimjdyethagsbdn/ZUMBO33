@@ -22,13 +22,15 @@ juce_add_plugin(ZUMBO
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     JUCE_CHANNELS_PROPERTY "2 2"
-    FORMATS VST3 AU Standalone
+    # ΔΙΟΡΘΩΣΗ: Κρατάμε μόνο το VST3 για να μην βγάζει σφάλμα το JUCE framework
+    FORMATS VST3
 )
 
-# ΔΙΟΡΘΩΣΗ: Εδώ αφαιρέθηκε τελείως το Source/ZumboDSP.cpp για να μην κολλήσει ο compiler
+# Ορισμός των αρχείων πηγής του project
 target_sources(ZUMBO PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/ZumboDSP.cpp
 )
 
 # Σύνδεση με τις βιβλιοθήκες του JUCE
