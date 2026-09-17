@@ -17,11 +17,15 @@ jobs:
     - name: Run actions/checkout@v4
       uses: actions/checkout@v4
 
-    # Εδώ διορθώθηκε η εντολή για να κατεβαίνει το JUCE χωρίς σφάλμα
+    # Αυτός είναι ο νέος, σωστός τρόπος για να κατεβάσουμε το JUCE χωρίς σφάλματα
     - name: Download JUCE
-      run: git clone --depth 1 https://github.com JUCE_FRAMEWORK
+      uses: actions/checkout@v4
+      with:
+        repository: juce-framework/JUCE
+        ref: master
+        path: JUCE_FRAMEWORK
 
-    # Εδώ ενημερώσαμε τη διαδρομή ώστε το CMake να βρει τον φάκελο JUCE_FRAMEWORK
+    # Εδώ λέμε στο CMake πού βρίσκεται ο φάκελος JUCE_FRAMEWORK
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
 
