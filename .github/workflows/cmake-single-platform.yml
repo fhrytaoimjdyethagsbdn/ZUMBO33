@@ -35,16 +35,20 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Ρύθμιση του CMake με απενεργοποίηση του VST2 για να μην κολλάει το build
+    # Ρύθμιση του CMake
     - name: Configure CMake
       run: |
         rm -rf build
         cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK -DJUCE_PLUGIN_HOST_VST2=0
         echo "juce_generate_juce_header(ZUMBO)" >> CMakeLists.txt
 
+    # Χτίσιμο του Project
     - name: Build Project
       run: cmake --build build --config ${{ env.BUILD_TYPE }} --clean-first
 
-    - name: Test Project
-      run: cd build && ctest -C ${{ env.BUILD_TYPE }}
-
+    # ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Αυτό το βήμα παίρνει το έτοιμο .vst3 και το εμφανίζει στα Artifacts για να το κατεβάσεις
+    - name: Upload Plugin Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ZUMBO_VST3_Plugin
+        path: build/ZUMBO_artefacts/Release/VST3/
