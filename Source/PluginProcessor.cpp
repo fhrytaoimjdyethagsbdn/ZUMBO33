@@ -36,10 +36,21 @@ public:
         // Ο συνθεσάιζερ παράγει πρώτα τον ήχο
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
         
-        // Εφέ και DSP επεξεργασία με τις σωστές παραμέτρους (χωρίς κείμενο σε εισαγωγικά)
+        // Εφέ και DSP επεξεργασία
         engine.nor11.set("drive", (float)*apvts.getRawParameterValue("fdr"));
-        engine.granular._sr = getSampleRate();
-        engine.granular.set((float)*apvts.getRawParameterValue("grain_size"), (float)*apvts.getRawParameterValue("grain_spread"), (float)*apvts.getRawParameterValue("grain_pd"));
+        
+        // Διορθώθηκε σε σκέτο .sr αντί για ._sr
+        engine.granular.sr = getSampleRate();
+        
+        // Διορθώθηκε η set του granular ώστε να παίρνει και τις 6 παραμέτρους που ζητάει το ZumboDSP.h
+        engine.granular.set(
+            (float)*apvts.getRawParameterValue("grain_pos"),
+            (float)*apvts.getRawParameterValue("grain_size"), 
+            (float)*apvts.getRawParameterValue("grain_density"), 
+            (float)*apvts.getRawParameterValue("grain_spread"),
+            (float)*apvts.getRawParameterValue("grain_pitch"),
+            (bool)*apvts.getRawParameterValue("grain_rev")
+        );
         engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
         
         engine.reverseDelay.set((float)*apvts.getRawParameterValue("reverse_mix"), (float)*apvts.getRawParameterValue("delay_time"), (float)*apvts.getRawParameterValue("delay_feedback")); 
