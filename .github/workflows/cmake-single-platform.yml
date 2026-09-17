@@ -17,13 +17,13 @@ jobs:
     - name: Run actions/checkout@v4
       uses: actions/checkout@v4
 
-    # Αυτό το βήμα κατεβάζει το JUCE στον εικονικό υπολογιστή του GitHub
+    # Εδώ διορθώθηκε η εντολή για να κατεβαίνει το JUCE χωρίς σφάλμα
     - name: Download JUCE
-      run: git clone --depth 1 https://github.com ${{ github.workspace }}/JUCE
+      run: git clone --depth 1 https://github.com JUCE_FRAMEWORK
 
-    # Εδώ ρυθμίζουμε το CMake και του λέμε πού βρίσκεται το JUCE
+    # Εδώ ενημερώσαμε τη διαδρομή ώστε το CMake να βρει τον φάκελο JUCE_FRAMEWORK
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
 
     - name: Build Project
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
