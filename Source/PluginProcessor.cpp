@@ -10,9 +10,9 @@ public:
 
 class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
-    // Εδώ βάλαμε το ZParams::createLayout() που βρήκαμε στο αρχείο σου
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
-    zumbo::engine engine; juce::Synthesiser synth;
+    // Εδώ διορθώθηκε σε Engine με κεφαλαίο E
+    zumbo::Engine engine; juce::Synthesiser synth;
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
         synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V(*this)); synth.clearSounds(); synth.addSound(new ZSound());
@@ -82,7 +82,7 @@ public:
                         lev_arr,
                         tune_arr,
                         wave_arr,
-                        *pix.apvts.getRawParameterValue("filter_cutoff"), // Διορθώθηκε σε filter_cutoff βάσει του ZumboParameters.h
+                        *pix.apvts.getRawParameterValue("filter_cutoff"),
                         *pix.apvts.getRawParameterValue("filter_reso"),
                         *pix.apvts.getRawParameterValue("filter_mode"),
                         *pix.apvts.getRawParameterValue("filter_drive"),
