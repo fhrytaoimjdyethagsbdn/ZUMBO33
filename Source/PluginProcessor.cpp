@@ -52,25 +52,32 @@ public:
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
         
-        // Εδώ διορθώθηκε η κλήση της render με όλες τις 8 απαραίτητες παραμέτρους
         void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
+            // Δημιουργούμε στατικούς πίνακες 8 στοιχείων με τις τιμές των παραμέτρων για να ταιριάζουν με το std::array<float,8>
+            std::array<float, 8> lev_arr;  lev_arr.fill(*pix.apvts.getRawParameterValue("lev"));
+            std::array<float, 8> tune_arr; tune_arr.fill(*pix.apvts.getRawParameterValue("tune"));
+            std::array<int, 8> wave_arr;   wave_arr.fill(int(*pix.apvts.getRawParameterValue("wave")));
+
             for (int i = 0; i < 32; i++) {
                 if (pix.engine.voices[(idx + i) % 32].playing) {
+                    // Καλούμε τη render με τις 8 σωστές παραμέτρους
+                    float sampleOut = pix.engine.voices[(idx + i) % 32].render(
+                        lev_arr,
+                        tune_arr,
+                        wave_arr,
+                        *pix.apvts.getRawParameterValue("filter_freq"),
+                        *pix.apvts.getRawParameterValue("filter_reso"),
+                        *pix.apvts.getRawParameterValue("filter_mode"),
+                        *pix.apvts.getRawParameterValue("filter_drive"),
+                        *pix.apvts.getRawParameterValue("master")
+                    );
+
+                    // Προσθέτουμε το δείγμα ήχου στα κανάλια εξόδου
                     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
                         auto* channelData = outputBuffer.getWritePointer(channel, startSample);
-                        
-                        // Καλούμε τη render δίνοντας τις 8 παραμέτρους που ζητάει το ZumboDSP.h
-                        pix.engine.voices[(idx + i) % 32].render(
-                            channelData,
-                            *pix.apvts.getRawParameterValue("lev"),
-                            *pix.apvts.getRawParameterValue("tune"),
-                            *pix.apvts.getRawParameterValue("wave"),
-                            *pix.apvts.getRawParameterValue("filter_freq"),  // cutoff
-                            *pix.apvts.getRawParameterValue("filter_reso"),  // res
-                            *pix.apvts.getRawParameterValue("filter_mode"),  // mode
-                            *pix.apvts.getRawParameterValue("filter_drive"), // drive
-                            numSamples                                       // master / samples count
-                        );
+                        for (int s = 0; s < numSamples; ++s) {
+                            channelData[s] += sampleOut;
+                        }
                     }
                 }
             }
