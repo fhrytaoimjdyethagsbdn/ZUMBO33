@@ -35,10 +35,10 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Εδώ διορθώσαμε την εντολή ώστε να αντικαθιστά σωστά τη γραμμή project χωρίς διπλό LANGUAGES
+    # Εδώ ορίζουμε αναγκαστικά και το VERSION 1.0.0 για να λυθεί το τελευταίο σφάλμα
     - name: Inject C Language to CMakeLists
       run: |
-        sed -i 's/project(.*)/project(ZUMBO33 LANGUAGES CXX C)/g' CMakeLists.txt
+        sed -i 's/project(.*)/project(ZUMBO33 VERSION 1.0.0 LANGUAGES CXX C)/g' CMakeLists.txt
 
     # Ρύθμιση του CMake
     - name: Configure CMake
