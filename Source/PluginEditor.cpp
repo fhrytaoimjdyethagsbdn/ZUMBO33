@@ -1,12 +1,14 @@
 #include <JuceHeader.h>
-#include "PluginProcessor.cpp" // Διαβάζει αυτόματα την κλάση ZUMBOAudioProcessor
+
+// Λέμε στον compiler ότι η κλάση ZUMBOAudioProcessor υπάρχει κάπου αλλού
+class ZUMBOAudioProcessor; 
 
 class ZUMBOAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
-    ZUMBOAudioProcessor& audioProcessor;
+    juce::AudioProcessor& audioProcessor;
 
-    ZUMBOAudioProcessorEditor (ZUMBOAudioProcessor& p)
+    ZUMBOAudioProcessorEditor (juce::AudioProcessor& p)
         : AudioProcessorEditor (&p), audioProcessor (p)
     {
         setSize (400, 300);
@@ -24,9 +26,3 @@ public:
 
     void resized() override {}
 };
-
-// Αυτή η συνάρτηση συνδέει τον Processor με τον Editor
-juce::AudioProcessorEditor* ZUMBOAudioProcessor::createEditor()
-{
-    return new ZUMBOAudioProcessorEditor (*this);
-}
