@@ -35,14 +35,15 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Ρύθμιση του CMake και αυτόματη δημιουργία του JuceHeader
+    # Ρύθμιση του CMake με πλήρη καθαρισμό φακέλων (Fresh Build)
     - name: Configure CMake
       run: |
+        rm -rf build
         cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
         echo "juce_generate_juce_header(ZUMBO)" >> CMakeLists.txt
 
     - name: Build Project
-      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --clean-first
 
     - name: Test Project
       run: cd build && ctest -C ${{ env.BUILD_TYPE }}
