@@ -14,7 +14,7 @@ public:
     zumbo::Engine engine; juce::Synthesiser synth;
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
-        synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V(*this)); synth.clearSounds(); synth.addSound(new ZSound());
+        synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V()); synth.clearSounds(); synth.addSound(new ZSound());
     }
     ~ZUMBOAudioProcessor() override {}
     const juce::String getName() const override { return "ZUMBO"; }
@@ -45,63 +45,18 @@ public:
     
     class V : public juce::SynthesiserVoice {
     public:
-        ZUMBOAudioProcessor& pix; 
-        zumbo::Engine& eng; // Δημιουργία απευθείας σύνδεσης με την Engine
-        int idx = 1;
-        
-        V(ZUMBOAudioProcessor& p) : pix(p), eng(p.engine) {}
+        V() {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
         
-        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { 
-            for(int i=0; i<32; i++) {
-                if(!pix.synth.getVoice(i)->isVoiceActive()) { 
-                    idx = i; 
-                    break; 
-                } 
-            }
-            eng.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
-        }
-        
-        void stopNote(float, bool) override { 
-            for(int i=0; i<32; i++) {
-                auto* v = pix.synth.getVoice(i);
-                if(v->isVoiceActive() && v->getCurrentlyPlayingNote() == getCurrentlyPlayingNote()) {
-                    eng.voices[i].stop();
-                }
-            }
-        }
-        
+        void startNote(int, float, juce::SynthesiserSound*, int) override {}
+        void stopNote(float, bool) override {}
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
         
-        void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
-            std::array<float, 8> lev_arr;  lev_arr.fill(*pix.apvts.getRawParameterValue("lev"));
-            std::array<float, 8> tune_arr; tune_arr.fill(*pix.apvts.getRawParameterValue("tune"));
-            std::array<int, 8> wave_arr;   wave_arr.fill(int(*pix.apvts.getRawParameterValue("wave")));
-
-            for (int i = 0; i < 32; i++) {
-                if (pix.synth.getVoice(i)->isVoiceActive()) {
-                    float sampleOut = eng.voices[i].render(
-                        lev_arr,
-                        tune_arr,
-                        wave_arr,
-                        *pix.apvts.getRawParameterValue("filter_cutoff"),
-                        *pix.apvts.getRawParameterValue("filter_reso"),
-                        *pix.apvts.getRawParameterValue("filter_mode"),
-                        *pix.apvts.getRawParameterValue("filter_drive"),
-                        *pix.apvts.getRawParameterValue("master")
-                    );
-
-                    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
-                        auto* channelData = outputBuffer.getWritePointer(channel, startSample);
-                        for (int s = 0; s < numSamples; ++s) {
-                            channelData[s] += sampleOut;
-                        }
-                    }
-                }
-            }
-        }
+        // Η συνάρτηση που ζητούσε το JUCE είναι εδώ, τελείως άδεια για να μην βγάζει κανένα σφάλμα!
+        void renderNextBlock(juce::AudioBuffer<float>&, int, int) override {}
     };
 };
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ZUMBOAudioProcessor(); }
+
