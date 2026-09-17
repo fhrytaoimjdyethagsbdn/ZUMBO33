@@ -2,9 +2,6 @@
 #include "ZumboParameters.h"
 #include "ZumboDSP.h"
 
-// Βάζουμε την engine εδώ πάνω για να τη βλέπει ο compiler παντού εγγυημένα
-zumbo::Engine engine; 
-
 class ZSound : public juce::SynthesiserSound {
 public:
     bool appliesToNote(int) override { return true; }
@@ -15,6 +12,9 @@ class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
     juce::Synthesiser synth;
+    
+    // ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Η engine μπαίνει εδώ μέσα στο public για να τη βλέπουν όλες οι συναρτήσεις της κλάσης
+    zumbo::Engine engine; 
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
         synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V()); synth.clearSounds(); synth.addSound(new ZSound());
@@ -62,4 +62,3 @@ public:
 };
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ZUMBOAudioProcessor(); }
-
