@@ -1,109 +1,171 @@
-#include <JuceHeader.h>
-#include "ZumboParameters.h"
-#include "ZumboDSP.h"
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
 
-class ZSound : public juce::SynthesiserSound {
-public:
-    bool appliesToNote(int) override { return true; }
-    bool appliesToChannel(int) override { return true; }
-};
-
-class ZumboProcessor : public juce::AudioProcessor {
-public:
-    // Επαναφορά της δικής σου αρχικής αρχικοποίησης για το apvts
-    juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", zumbo::Params::createLayout()};
-    zumbo::Engine engine; juce::Synthesiser synth;
-    
-    ZumboProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
-        synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V(*this)); synth.clearSounds(); synth.addSound(new ZSound());
+//==============================================================================
+ZUMBOAudioProcessor::ZUMBOAudioProcessor()
+#ifndef JucePlugin_PreferredChannelConfigurations
+     : AudioProcessor (BusesProperties()
+                     #if ! JucePlugin_IsMidiEffect
+                      #if ! JucePlugin_IsSynth
+                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                      #endif
+                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                     #endif
+                       )
+#endif
+{
+    synth.clearVoices();
+    for (int i = 0; i < 32; i++)
+    {
+        synth.addVoice(new V(*this));
     }
-    ~ZumboProcessor() override {}
-    const juce::String getName() const override { return "ZUMBO"; }
-    bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return false; }
-    bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 12; }
-    int getNumPrograms() override { return 1; }
-    int getCurrentProgram() override { return 0; }
-    void setCurrentProgram(int) override {}
-    const juce::String getProgramName(int) override { return ""; }
-    void changeProgramName(int, const juce::String&) override {}
-    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackSampleRate(sr); }
-    void releaseResources() override {}
-    bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
-    
-    // Επαναφορά της δικής σου αρχικής processBlock ακριβώς όπως την είχες γράψει!
-    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
-        juce::ScopedNoDenormals noDenormals; 
-        
-        // Ο συνθεσάιζερ παράγει τον ήχο στις φωνές
-        synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        
-        // Η δική σου DSP επεξεργασία της μηχανής
-        engine.process(buffer, apvts);
-    }
-    
-    bool hasEditor() const override { return true; }
-    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
-    void getStateInformation(juce::MemoryBlock& dest) override { if(auto xml = apvts.copyState().createXml()) copyXmlToBinary(*xml, dest); }
-    void setStateInformation(const void* data, int size) override { if(auto xml = getXmlFromBinary(data, size)) apvts.replaceState(juce::ValueTree::fromXml(*xml)); }
-    
-    class V : public juce::SynthesiserVoice {
-    public:
-        ZumboProcessor& pix; int idx = 1;
-        V(ZumboProcessor& p) : pix(p) {}
-        bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
-        
-        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { 
-            for(int i=0; i<32; i++) {
-                if(!pix.synth.getVoice(i)->isVoiceActive()) { 
-                    idx = i; 
-                    break; 
-                } 
-            }
-            pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
-        }
-        
-        void stopNote(float, bool) override { 
-            for(int i=0; i<32; i++) {
-                auto* v = pix.synth.getVoice(i);
-                if(v->isVoiceActive() && v->getCurrentlyPlayingNote() == getCurrentlyPlayingNote()) {
-                    pix.engine.voices[i].stop();
-                }
-            }
-        }
-        
-        void pitchWheelMoved(int) override {}
-        void controllerMoved(int, int) override {}
-        
-        void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
-            std::array<float, 8> lev_arr;  lev_arr.fill(*pix.apvts.getRawParameterValue("lev"));
-            std::array<float, 8> tune_arr; tune_arr.fill(*pix.apvts.getRawParameterValue("tune"));
-            std::array<int, 8> wave_arr;   wave_arr.fill(int(*pix.apvts.getRawParameterValue("wave")));
+    synth.clearSounds();
+    synth.addSound(new ZSound());
+}
 
-            for (int i = 0; i < 32; i++) {
-                if (pix.synth.getVoice(i)->isVoiceActive()) {
-                    float sampleOut = pix.engine.voices[i].render(
-                        lev_arr,
-                        tune_arr,
-                        wave_arr,
-                        *pix.apvts.getRawParameterValue("filter_freq"),
-                        *pix.apvts.getRawParameterValue("filter_reso"),
-                        *pix.apvts.getRawParameterValue("filter_mode"),
-                        *pix.apvts.getRawParameterValue("filter_drive"),
-                        *pix.apvts.getRawParameterValue("master")
-                    );
+ZUMBOAudioProcessor::~ZUMBOAudioProcessor()
+{
+}
 
-                    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
-                        auto* channelData = outputBuffer.getWritePointer(channel, startSample);
-                        for (int s = 0; s < numSamples; ++s) {
-                            channelData[s] += sampleOut;
-                        }
-                    }
-                }
-            }
-        }
-    };
-};
+//==============================================================================
+const juce::String ZUMBOAudioProcessor::getName() const
+{
+    return JucePlugin_Name;
+}
 
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ZumboProcessor(); }
+bool ZUMBOAudioProcessor::acceptsMidi() const
+{
+   #if JucePlugin_WantsMidiInput
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+bool ZUMBOAudioProcessor::producesMidi() const
+{
+   #if JucePlugin_ProducesMidiOutput
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+bool ZUMBOAudioProcessor::isMidiEffect() const
+{
+   #if JucePlugin_IsMidiEffect
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+double ZUMBOAudioProcessor::getTailLengthSeconds() const
+{
+    return 0.0;
+}
+
+int ZUMBOAudioProcessor::getNumPrograms()
+{
+    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
+                // so this should be at least 1, even if you're not really implementing programs.
+}
+
+int ZUMBOAudioProcessor::getCurrentProgram()
+{
+    return 0;
+}
+
+void ZUMBOAudioProcessor::setCurrentProgram (int index)
+{
+}
+
+const juce::String ZUMBOAudioProcessor::getProgramName (int index)
+{
+    return {};
+}
+
+void ZUMBOAudioProcessor::changeProgramName (int index, const juce::String& newName)
+{
+}
+
+//==============================================================================
+void ZUMBOAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
+    engine.prepare(sampleRate, samplesPerBlock);
+    synth.setCurrentPlaybackSampleRate(sampleRate);
+}
+
+void ZUMBOAudioProcessor::releaseResources()
+{
+    // When playback stops, you can use this as an opportunity to free up any
+    // spare memory, etc.
+}
+
+#ifndef JucePlugin_PreferredChannelConfigurations
+bool ZUMBOAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+{
+  #if JucePlugin_IsMidiEffect
+    juce::ignoreUnused (layouts);
+    return true;
+  #else
+    // This is the place where you check if the layout is supported.
+    // In this template code we only support mono or stereo.
+    // Some hosts    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
+     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        return false;
+
+    // This checks if the input layout matches the output layout
+   #if ! JucePlugin_IsSynth
+    if (layouts.getMainInputChannelSet() != layouts.getMainOutputChannelSet())
+        return false;
+   #endif
+
+    return true;
+  #endif
+}
+#endif
+
+void ZUMBOAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
+
+    synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    engine.process(buffer, apvts);
+}
+
+//==============================================================================
+bool ZUMBOAudioProcessor::hasEditor() const
+{
+    return true; // (change this to false if you choose to not have an editor)
+}
+
+juce::AudioProcessorEditor* ZUMBOAudioProcessor::createEditor()
+{
+    return new ZUMBOAudioProcessorEditor (*this);
+}
+
+//==============================================================================
+void ZUMBOAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    if (auto xml = apvts.copyState().createXml())
+        copyXmlToBinary(*xml, destData);
+}
+
+void ZUMBOAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    if (auto xml = getXmlFromBinary(data, sizeInBytes))
+        apvts.replaceState(juce::ValueTree::fromXml(*xml));
+}
+
+//==============================================================================
+// This creates new instances of the plugin..
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new ZUMBOAudioProcessor();
+}
