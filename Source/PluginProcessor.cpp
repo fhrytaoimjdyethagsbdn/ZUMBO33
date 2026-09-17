@@ -11,6 +11,7 @@ public:
 class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
+    // ΔΙΟΡΘΩΣΗ: Χρήση του σωστού τύπου Engine με κεφαλαίο Ε
     zumbo::Engine engine; juce::Synthesiser synth;
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
@@ -27,7 +28,8 @@ public:
     void setCurrentProgram(int) override {}
     const juce::String getProgramName(int) override { return ""; }
     void changeProgramName(int, const juce::String&) override {}
-    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackRate(sr); }
+    // ΔΙΟΡΘΩΣΗ: Χρήση του σωστού ονόματος της συνάρτησης του JUCE (setCurrentPlaybackSampleRate)
+    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackSampleRate(sr); }
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
     
@@ -53,7 +55,6 @@ public:
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
         
-        // Η συνάρτηση που ζητούσε το JUCE είναι εδώ, τελείως άδεια για να μην βγάζει κανένα σφάλμα!
         void renderNextBlock(juce::AudioBuffer<float>&, int, int) override {}
     };
 };
