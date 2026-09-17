@@ -10,11 +10,10 @@ public:
 
 class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
+    // ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Η engine μπαίνει πρώτη-πρώτη στην κλάση για να είναι δηλωμένη πριν από τις συναρτήσεις
+    zumbo::Engine engine; 
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
     juce::Synthesiser synth;
-    
-    // ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Η engine μπαίνει εδώ μέσα στο public για να τη βλέπουν όλες οι συναρτήσεις της κλάσης
-    zumbo::Engine engine; 
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
         synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V()); synth.clearSounds(); synth.addSound(new ZSound());
