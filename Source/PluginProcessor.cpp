@@ -10,8 +10,10 @@ public:
 
 class ZumboProcessor : public juce::AudioProcessor {
 public:
-    juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", Params::createLayout()};
+    // Επαναφορά της δικής σου αρχικής αρχικοποίησης για το apvts
+    juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", zumbo::Params::createLayout()};
     zumbo::Engine engine; juce::Synthesiser synth;
+    
     ZumboProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
         synth.clearVoices(); for(int i=0; i<32; i++) synth.addVoice(new V(*this)); synth.clearSounds(); synth.addSound(new ZSound());
     }
@@ -30,34 +32,15 @@ public:
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
     
+    // Επαναφορά της δικής σου αρχικής processBlock ακριβώς όπως την είχες γράψει!
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
         
-        // Ο συνθεσάιζερ παράγει πρώτα τον ήχο
+        // Ο συνθεσάιζερ παράγει τον ήχο στις φωνές
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
         
-        // Εφέ και DSP επεξεργασία
-        engine.nor11.set("drive", (float)*apvts.getRawParameterValue("fdr"));
-        
-        // Διορθώθηκε σε σκέτο .sr αντί για ._sr
-        engine.granular.sr = getSampleRate();
-        
-        // Διορθώθηκε η set του granular ώστε να παίρνει και τις 6 παραμέτρους που ζητάει το ZumboDSP.h
-        engine.granular.set(
-            (float)*apvts.getRawParameterValue("grain_pos"),
-            (float)*apvts.getRawParameterValue("grain_size"), 
-            (float)*apvts.getRawParameterValue("grain_density"), 
-            (float)*apvts.getRawParameterValue("grain_spread"),
-            (float)*apvts.getRawParameterValue("grain_pitch"),
-            (bool)*apvts.getRawParameterValue("grain_rev")
-        );
-        engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
-        
-        engine.reverseDelay.set((float)*apvts.getRawParameterValue("reverse_mix"), (float)*apvts.getRawParameterValue("delay_time"), (float)*apvts.getRawParameterValue("delay_feedback")); 
-        engine.reverseDelay.process(buffer);
-        
-        engine.reverb.set((float)*apvts.getRawParameterValue("reverb_mix"), (float)*apvts.getRawParameterValue("shimmer")); 
-        engine.reverb.process(buffer);
+        // Η δική σου DSP επεξεργασία της μηχανής
+        engine.process(buffer, apvts);
     }
     
     bool hasEditor() const override { return true; }
