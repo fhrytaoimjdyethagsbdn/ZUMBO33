@@ -17,14 +17,14 @@ jobs:
     - name: Run actions/checkout@v4
       uses: actions/checkout@v4
 
-    # Εγκατάσταση όλων των απαραίτητων βιβλιοθηκών του Linux για το JUCE
+    # Εδώ διορθώθηκαν τα ονόματα των βιβλιοθηκών για να είναι συμβατά με το νέο Ubuntu
     - name: Install Linux Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y libasound2-dev libjack-jackd2-dev \
           ladspa-sdk freeglut3-dev libfreetype6-dev libx11-dev \
-          libxext-dev libxxrm-dev libxrandr-dev libxinerama-dev \
-          libxcursor-dev libxcomposite-dev libwebkit2gtk-4.0-dev \
+          libxext-dev libxrandr-dev libxinerama-dev \
+          libxcursor-dev libxcomposite-dev libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev mesa-common-dev
 
     # Κατέβασμα του JUCE framework
@@ -35,14 +35,15 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Εδώ ενεργοποιούμε αναγκαστικά τη γλώσσα C μέσω του CMAKE_PROJECT_INCLUDE_BEFORE
-    - name: Configure CMake
+    # Αυτό το βήμα διορθώνει αυτόματα το αρχείο CMakeLists.txt προσθέτοντας τη γλώσσα C που ζητάει το JUCE
+    - name: Inject C Language to CMakeLists
       run: |
-        echo "enable_language(C)" > enable_c.cmake
-        cmake -B build \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK \
-          -DCMAKE_PROJECT_INCLUDE_BEFORE=${{ github.workspace }}/enable_c.cmake
+        sed -i 's/LANGUAGES CXX/LANGUAGES CXX C/g' CMakeLists.txt
+        sed -i 's/project(\([^)]*\))/project(\1 LANGUAGES CXX C)/g' CMakeLists.txt
+
+    # Ρύθμιση του CMake
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
 
     - name: Build Project
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
