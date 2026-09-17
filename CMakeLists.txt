@@ -22,7 +22,7 @@ juce_add_plugin(ZUMBO
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     JUCE_CHANNELS_PROPERTY "2 2"
-    # ΔΙΟΡΘΩΣΗ: Κρατάμε μόνο το VST3 για να μην βγάζει σφάλμα το JUCE framework
+    # ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Αφαιρέθηκαν οι άλλες μορφές και έμεινε μόνο το VST3
     FORMATS VST3
 )
 
