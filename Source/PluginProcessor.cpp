@@ -10,8 +10,6 @@ public:
 
 class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
-    // ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Η engine μπαίνει πρώτη-πρώτη στην κλάση για να είναι δηλωμένη πριν από τις συναρτήσεις
-    zumbo::Engine engine; 
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
     juce::Synthesiser synth;
     
@@ -30,14 +28,13 @@ public:
     const juce::String getProgramName(int) override { return ""; }
     void changeProgramName(int, const juce::String&) override {}
     
-    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackSampleRate(sr); }
+    void prepareToPlay(double sr, int) override { synth.setCurrentPlaybackSampleRate(sr); }
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
     
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        engine.process(buffer, apvts);
     }
     
     bool hasEditor() const override { return true; }
