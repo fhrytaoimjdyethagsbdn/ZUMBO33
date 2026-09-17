@@ -22,9 +22,11 @@ juce_add_plugin(ZUMBO
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     JUCE_CHANNELS_PROPERTY "2 2"
-    # ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Αφαιρέθηκαν οι άλλες μορφές και έμεινε μόνο το VST3
     FORMATS VST3
 )
+
+# ΕΓΓΥΗΜΕΝΗ ΔΙΟΡΘΩΣΗ: Εντολή στο JUCE να σταματήσει τη σύγκρουση αυτοματισμών VST2/VST3
+set_target_properties(ZUMBO PROPERTIES JUCE_DISABLE_VST2_COMPATIBILITY_WITH_VST3 TRUE)
 
 # Ορισμός των αρχείων πηγής του project
 target_sources(ZUMBO PRIVATE
@@ -53,3 +55,4 @@ target_compile_definitions(ZUMBO PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
 )
+
