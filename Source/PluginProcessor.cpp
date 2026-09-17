@@ -33,39 +33,15 @@ public:
     
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
-        
-        // 1. Ο συνθεσάιζερ παράγει τον αρχικό ήχο στις φωνές
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        
-        // 2. Επεξεργασία Granular
-        engine.granular.set(
-            (float)*apvts.getRawParameterValue("grain_position"),
-            (float)*apvts.getRawParameterValue("grain_size"), 
-            (float)*apvts.getRawParameterValue("grain_density"), 
-            (float)*apvts.getRawParameterValue("grain_spread"),
-            (float)*apvts.getRawParameterValue("grain_pitch"),
-            (bool)*apvts.getRawParameterValue("grain_reverse")
-        );
-        engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
-        
-        // 3. Επεξεργασία Reverse Delay με τις 3 σωστές παραμέτρους
-        engine.reverseDelay.set(
-            (float)*apvts.getRawParameterValue("delay_mix"),
-            (float)*apvts.getRawParameterValue("delay_time"), 
-            (float)*apvts.getRawParameterValue("delay_feedback")
-        ); 
-        engine.reverseDelay.process(buffer);
-        
-        // 4. Επεξεργασία Reverb
-        engine.reverb.set(
-            (float)*apvts.getRawParameterValue("reverb_mix"), 
-            (float)*apvts.getRawParameterValue("shimmer")
-        ); 
-        engine.reverb.process(buffer);
+        engine.process(buffer, apvts);
     }
     
     bool hasEditor() const override { return true; }
-    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
+    
+    // Εδώ μπήκε η createEditor μόνη της και σωστά
+    juce::AudioProcessorEditor* createEditor() override { return new juce::GenericAudioProcessorEditor(*this); }
+    
     void getStateInformation(juce::MemoryBlock& dest) override { if(auto xml = apvts.copyState().createXml()) copyXmlToBinary(*xml, dest); }
     void setStateInformation(const void* data, int size) override { if(auto xml = getXmlFromBinary(data, size)) apvts.replaceState(juce::ValueTree::fromXml(*xml)); }
     
