@@ -27,15 +27,14 @@ public:
     void setCurrentProgram(int) override {}
     const juce::String getProgramName(int) override { return ""; }
     void changeProgramName(int, const juce::String&) override {}
-    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackSampleRate(sr); }
+    void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackRate(sr); }
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
     
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
-        
-        // Ο συνθεσάιζερ παράγει κανονικά τον ήχο του χωρίς να κολλάει στα εφέ
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
+        engine.process(buffer, apvts);
     }
     
     bool hasEditor() const override { return true; }
@@ -64,6 +63,7 @@ public:
             for(int i=0; i<32; i++) {
                 auto* v = pix.synth.getVoice(i);
                 if(v->isVoiceActive() && v->getCurrentlyPlayingNote() == getCurrentlyPlayingNote()) {
+                    // ΔΙΟΡΘΩΣΗ: Προσθήκη pix. μπροστά από την engine
                     pix.engine.voices[i].stop();
                 }
             }
@@ -79,6 +79,7 @@ public:
 
             for (int i = 0; i < 32; i++) {
                 if (pix.synth.getVoice(i)->isVoiceActive()) {
+                    // ΔΙΟΡΘΩΣΗ: Προσθήκη pix. μπροστά από την engine
                     float sampleOut = pix.engine.voices[i].render(
                         lev_arr,
                         tune_arr,
