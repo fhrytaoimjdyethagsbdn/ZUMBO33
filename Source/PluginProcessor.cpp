@@ -47,15 +47,33 @@ public:
         ZumboProcessor& pix; int idx = 1;
         V(ZumboProcessor& p) : pix(p) {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
-        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { for(int i=0; i<32; i++) if(!pix.engine.voices[(idx+i)%32].isPlaying) { idx=(idx+i)%32; break; } pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); }
-        void stopNote(float, bool) override { for(auto&v:pix.engine.voices) if(v.isPlaying&&v.currentNote==getCurrentlyPlayingNote()) v.stop(); }
+        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { for(int i=0; i<32; i++) if(!pix.engine.voices[(idx+i)%32].playing) { idx=(idx+i)%32; break; } pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); }
+        void stopNote(float, bool) override { for(auto&v:pix.engine.voices) if(v.playing&&v.currentNote==getCurrentlyPlayingNote()) v.stop(); }
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
         
-        // Αυτή είναι η σωστή και απλή μορφή της συνάρτησης όπως την είχες γράψει αρχικά!
+        // Εδώ διορθώθηκε η κλήση της render με όλες τις 8 απαραίτητες παραμέτρους
         void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
-            juce::AudioBuffer<float> sub(outputBuffer.getArrayOfWritePointers(), outputBuffer.getNumChannels(), startSample, numSamples);
-            for(int i=0; i<32; i++) if(pix.engine.voices[(idx+i)%32].isPlaying) { pix.engine.voices[(idx+i)%32].render(sub); }
+            for (int i = 0; i < 32; i++) {
+                if (pix.engine.voices[(idx + i) % 32].playing) {
+                    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
+                        auto* channelData = outputBuffer.getWritePointer(channel, startSample);
+                        
+                        // Καλούμε τη render δίνοντας τις 8 παραμέτρους που ζητάει το ZumboDSP.h
+                        pix.engine.voices[(idx + i) % 32].render(
+                            channelData,
+                            *pix.apvts.getRawParameterValue("lev"),
+                            *pix.apvts.getRawParameterValue("tune"),
+                            *pix.apvts.getRawParameterValue("wave"),
+                            *pix.apvts.getRawParameterValue("filter_freq"),  // cutoff
+                            *pix.apvts.getRawParameterValue("filter_reso"),  // res
+                            *pix.apvts.getRawParameterValue("filter_mode"),  // mode
+                            *pix.apvts.getRawParameterValue("filter_drive"), // drive
+                            numSamples                                       // master / samples count
+                        );
+                    }
+                }
+            }
         }
     };
 };
