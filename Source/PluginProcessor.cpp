@@ -47,21 +47,40 @@ public:
         ZumboProcessor& pix; int idx = 1;
         V(ZumboProcessor& p) : pix(p) {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
-        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { for(int i=0; i<32; i++) if(!pix.engine.voices[(idx+i)%32].playing) { idx=(idx+i)%32; break; } pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); }
-        void stopNote(float, bool) override { for(auto&v:pix.engine.voices) if(v.playing&&v.currentNote==getCurrentlyPlayingNote()) v.stop(); }
+        
+        // Χρήση της επίσημης isVoiceActive() του JUCE
+        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { 
+            for(int i=0; i<32; i++) {
+                if(!pix.synth.getVoice(i)->isVoiceActive()) { 
+                    idx = i; 
+                    break; 
+                } 
+            }
+            pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
+        }
+        
+        // Χρήση της επίσημης getCurrentlyPlayingNote() του JUCE
+        void stopNote(float, bool) override { 
+            for(int i=0; i<32; i++) {
+                auto* v = pix.synth.getVoice(i);
+                if(v->isVoiceActive() && v->getCurrentlyPlayingNote() == getCurrentlyPlayingNote()) {
+                    pix.engine.voices[i].stop();
+                }
+            }
+        }
+        
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
         
         void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
-            // Δημιουργούμε στατικούς πίνακες 8 στοιχείων με τις τιμές των παραμέτρων για να ταιριάζουν με το std::array<float,8>
             std::array<float, 8> lev_arr;  lev_arr.fill(*pix.apvts.getRawParameterValue("lev"));
             std::array<float, 8> tune_arr; tune_arr.fill(*pix.apvts.getRawParameterValue("tune"));
             std::array<int, 8> wave_arr;   wave_arr.fill(int(*pix.apvts.getRawParameterValue("wave")));
 
             for (int i = 0; i < 32; i++) {
-                if (pix.engine.voices[(idx + i) % 32].playing) {
-                    // Καλούμε τη render με τις 8 σωστές παραμέτρους
-                    float sampleOut = pix.engine.voices[(idx + i) % 32].render(
+                // Ελέγχουμε αν η συγκεκριμένη φωνή του JUCE είναι ενεργή
+                if (pix.synth.getVoice(i)->isVoiceActive()) {
+                    float sampleOut = pix.engine.voices[i].render(
                         lev_arr,
                         tune_arr,
                         wave_arr,
@@ -72,7 +91,6 @@ public:
                         *pix.apvts.getRawParameterValue("master")
                     );
 
-                    // Προσθέτουμε το δείγμα ήχου στα κανάλια εξόδου
                     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
                         auto* channelData = outputBuffer.getWritePointer(channel, startSample);
                         for (int s = 0; s < numSamples; ++s) {
