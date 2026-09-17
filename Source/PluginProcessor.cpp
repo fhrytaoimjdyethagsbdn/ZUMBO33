@@ -29,26 +29,37 @@ public:
     void prepareToPlay(double sr, int block) override { engine.prepare(sr, block); synth.setCurrentPlaybackSampleRate(sr); }
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
+    
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
-        juce::ScopedNoDenormals noDenormals; synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
+        juce::ScopedNoDenormals noDenormals; 
+        
+        // Ο συνθεσάιζερ παράγει πρώτα τον ήχο
+        synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
+        
+        // Εφέ και DSP επεξεργασία με τις σωστές παραμέτρους (χωρίς κείμενο σε εισαγωγικά)
         engine.nor11.set("drive", (float)*apvts.getRawParameterValue("fdr"));
         engine.granular._sr = getSampleRate();
-        engine.granular.set("grain_size", *apvts.getRawParameterValue("grain_size"), *apvts.getRawParameterValue("grain_spread"), *apvts.getRawParameterValue("grain_pd"));
-        engine.granular.process(buffer, *apvts.getRawParameterValue("grain_mix"));
-        engine.reverseDelay.set("reverse_mix", *apvts.getRawParameterValue("delay_mix"), *apvts.getRawParameterValue("delay_feedback")); engine.reverseDelay.process(buffer);
-        engine.reverb.set("reverb_mix", *apvts.getRawParameterValue("reverb_mix")); engine.reverb.process(buffer);
+        engine.granular.set((float)*apvts.getRawParameterValue("grain_size"), (float)*apvts.getRawParameterValue("grain_spread"), (float)*apvts.getRawParameterValue("grain_pd"));
+        engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
+        
+        engine.reverseDelay.set((float)*apvts.getRawParameterValue("reverse_mix"), (float)*apvts.getRawParameterValue("delay_time"), (float)*apvts.getRawParameterValue("delay_feedback")); 
+        engine.reverseDelay.process(buffer);
+        
+        engine.reverb.set((float)*apvts.getRawParameterValue("reverb_mix"), (float)*apvts.getRawParameterValue("shimmer")); 
+        engine.reverb.process(buffer);
     }
+    
     bool hasEditor() const override { return true; }
     juce::AudioProcessorEditor* createEditor() override { return nullptr; }
     void getStateInformation(juce::MemoryBlock& dest) override { if(auto xml = apvts.copyState().createXml()) copyXmlToBinary(*xml, dest); }
     void setStateInformation(const void* data, int size) override { if(auto xml = getXmlFromBinary(data, size)) apvts.replaceState(juce::ValueTree::fromXml(*xml)); }
+    
     class V : public juce::SynthesiserVoice {
     public:
         ZumboProcessor& pix; int idx = 1;
         V(ZumboProcessor& p) : pix(p) {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
         
-        // Χρήση της επίσημης isVoiceActive() του JUCE
         void startNote(int n, float vel, juce::SynthesiserSound*, int) override { 
             for(int i=0; i<32; i++) {
                 if(!pix.synth.getVoice(i)->isVoiceActive()) { 
@@ -59,7 +70,6 @@ public:
             pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
         }
         
-        // Χρήση της επίσημης getCurrentlyPlayingNote() του JUCE
         void stopNote(float, bool) override { 
             for(int i=0; i<32; i++) {
                 auto* v = pix.synth.getVoice(i);
@@ -78,7 +88,6 @@ public:
             std::array<int, 8> wave_arr;   wave_arr.fill(int(*pix.apvts.getRawParameterValue("wave")));
 
             for (int i = 0; i < 32; i++) {
-                // Ελέγχουμε αν η συγκεκριμένη φωνή του JUCE είναι ενεργή
                 if (pix.synth.getVoice(i)->isVoiceActive()) {
                     float sampleOut = pix.engine.voices[i].render(
                         lev_arr,
