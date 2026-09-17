@@ -35,15 +35,11 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Εδώ προσθέσαμε την εντολή juce_generate_juce_header για να φτιαχτεί αυτόματα το αρχείο που λείπει
-    - name: Inject C Language to CMakeLists
-      run: |
-        sed -i 's/project(.*)/project(ZUMBO33 VERSION 1.0.0 LANGUAGES CXX C)/g' CMakeLists.txt
-        echo "juce_generate_juce_header(ZUMBO)" >> CMakeLists.txt
-
-    # Ρύθμιση του CMake
+    # Ρύθμιση του CMake και αυτόματη δημιουργία του JuceHeader
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
+        echo "juce_generate_juce_header(ZUMBO)" >> CMakeLists.txt
 
     - name: Build Project
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
