@@ -1,0 +1,14 @@
+{
+  "name":"ZUMBO Factory",
+  "version":3,
+  "presets":[
+    {"name":"Night Canopy","category":"Dark Forest","description":"Deep evolving forest bed"},
+    {"name":"Neon Mycelium","category":"Granular","description":"Wet granular texture"},
+    {"name":"Ancient Machine","category":"Bass","description":"Resonant psychedelic bass"},
+    {"name":"Moon Insects","category":"FX","description":"Organic granular movement"},
+    {"name":"Black Sun","category":"Lead","description":"Wide hypnotic lead"},
+    {"name":"Fungal Echo","category":"Atmosphere","description":"Reverse-delay atmosphere"},
+    {"name":"Acid Roots","category":"Bass","description":"Resonant acid voice"},
+    {"name":"Shimmer Cave","category":"Atmosphere","description":"Long luminous reverb"}
+  ]
+}
