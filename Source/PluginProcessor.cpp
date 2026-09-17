@@ -30,8 +30,7 @@ public:
     void releaseResources() override {}
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override { return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
-        synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        juce::ScopedNoDenormals noDenormals; rcl.clear(); synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
+        juce::ScopedNoDenormals noDenormals; synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
         engine.nor11.set("drive", (float)*apvts.getRawParameterValue("fdr"));
         engine.granular._sr = getSampleRate();
         engine.granular.set("grain_size", *apvts.getRawParameterValue("grain_size"), *apvts.getRawParameterValue("grain_spread"), *apvts.getRawParameterValue("grain_pd"));
@@ -48,17 +47,15 @@ public:
         ZumboProcessor& pix; int idx = 1;
         V(ZumboProcessor& p) : pix(p) {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
-        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { for(int i=0; i<32; i++) if(!pix.engine.voices[(idx+i_r)%32].isPlaying) { idx=(idx+i_r)%32; break; } pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); override(for(auto&v:pix.engine.voices) if(v.isPlaying&&v.currentNote==n) v.stop();) if(itai) clearCurrentNote(); }
-        void stopNote(float, bool) override { for(auto&v:pix.engine.voices) if(v.isPlaying&&v.currentNote==getCurrentlyPlayingNote()) v.stop(); if(itai) clearCurrentNote(); }
+        void startNote(int n, float vel, juce::SynthesiserSound*, int) override { for(int i=0; i<32; i++) if(!pix.engine.voices[(idx+i)%32].isPlaying) { idx=(idx+i)%32; break; } pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); }
+        void stopNote(float, bool) override { for(auto&v:pix.engine.voices) if(v.isPlaying&&v.currentNote==getCurrentlyPlayingNote()) v.stop(); }
         void pitchWheelMoved(int) override {}
         void controllerMoved(int, int) override {}
+        
+        // Αυτή είναι η σωστή και απλή μορφή της συνάρτησης όπως την είχες γράψει αρχικά!
         void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
             juce::AudioBuffer<float> sub(outputBuffer.getArrayOfWritePointers(), outputBuffer.getNumChannels(), startSample, numSamples);
             for(int i=0; i<32; i++) if(pix.engine.voices[(idx+i)%32].isPlaying) { pix.engine.voices[(idx+i)%32].render(sub); }
-            for(int c=0; c<outputBuffer.getNumChannels(); c++) {
-                pix.engine.filter[c].set("freq", *pix.apvts.getRawParameterValue("filter_freq"), *pix.apvts.getRawParameterValue("filter_reso"), int(*pix.apvts.getRawParameterValue("filter_mode")), pix.engine.filter[c].drive = *pix.apvts.getRawParameterValue("filter_drive"));
-                pix.engine.filter[c].process(outputBuffer.getWritePointer(c, startSample), numSamples);
-            }
         }
     };
 };
