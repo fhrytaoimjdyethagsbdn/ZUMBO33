@@ -45,8 +45,11 @@ public:
     
     class V : public juce::SynthesiserVoice {
     public:
-        ZUMBOAudioProcessor& pix; int idx = 1;
-        V(ZUMBOAudioProcessor& p) : pix(p) {}
+        ZUMBOAudioProcessor& pix; 
+        zumbo::Engine& eng; // Δημιουργία απευθείας σύνδεσης με την Engine
+        int idx = 1;
+        
+        V(ZUMBOAudioProcessor& p) : pix(p), eng(p.engine) {}
         bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<const ZSound*>(sound) != nullptr; }
         
         void startNote(int n, float vel, juce::SynthesiserSound*, int) override { 
@@ -56,15 +59,14 @@ public:
                     break; 
                 } 
             }
-            pix.engine.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
+            eng.voices[idx].start(n, vel, *pix.apvts.getRawParameterValue("attack"), *pix.apvts.getRawParameterValue("decay"), *pix.apvts.getRawParameterValue("sustain"), *pix.apvts.getRawParameterValue("release")); 
         }
         
         void stopNote(float, bool) override { 
             for(int i=0; i<32; i++) {
                 auto* v = pix.synth.getVoice(i);
                 if(v->isVoiceActive() && v->getCurrentlyPlayingNote() == getCurrentlyPlayingNote()) {
-                    // ΔΙΟΡΘΩΣΗ: Προσθήκη pix. μπροστά από την engine
-                    pix.engine.voices[i].stop();
+                    eng.voices[i].stop();
                 }
             }
         }
@@ -79,8 +81,7 @@ public:
 
             for (int i = 0; i < 32; i++) {
                 if (pix.synth.getVoice(i)->isVoiceActive()) {
-                    // ΔΙΟΡΘΩΣΗ: Προσθήκη pix. μπροστά από την engine
-                    float sampleOut = pix.engine.voices[i].render(
+                    float sampleOut = eng.voices[i].render(
                         lev_arr,
                         tune_arr,
                         wave_arr,
