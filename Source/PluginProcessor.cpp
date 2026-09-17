@@ -11,7 +11,6 @@ public:
 class ZUMBOAudioProcessor : public juce::AudioProcessor {
 public:
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "ZUMBO_STATE", ZParams::createLayout()};
-    // Εδώ διορθώθηκε σε Engine με κεφαλαίο E
     zumbo::Engine engine; juce::Synthesiser synth;
     
     ZUMBOAudioProcessor() : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
@@ -34,8 +33,34 @@ public:
     
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
+        
+        // 1. Ο συνθεσάιζερ παράγει τον αρχικό ήχο στις φωνές
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        engine.process(buffer, apvts);
+        
+        // 2. Επεξεργασία Granular (περνάμε το buffer και το mix)
+        engine.granular.set(
+            (float)*apvts.getRawParameterValue("grain_position"),
+            (float)*apvts.getRawParameterValue("grain_size"), 
+            (float)*apvts.getRawParameterValue("grain_density"), 
+            (float)*apvts.getRawParameterValue("grain_spread"),
+            (float)*apvts.getRawParameterValue("grain_pitch"),
+            (bool)*apvts.getRawParameterValue("grain_reverse")
+        );
+        engine.granular.process(buffer, (float)*apvts.getRawParameterValue("grain_mix"));
+        
+        // 3. Επεξεργασία Reverse Delay
+        engine.reverseDelay.set(
+            (float)*apvts.getRawParameterValue("delay_time"), 
+            (float)*apvts.getRawParameterValue("delay_feedback")
+        ); 
+        engine.reverseDelay.process(buffer);
+        
+        // 4. Επεξεργασία Reverb
+        engine.reverb.set(
+            (float)*apvts.getRawParameterValue("reverb_mix"), 
+            (float)*apvts.getRawParameterValue("shimmer")
+        ); 
+        engine.reverb.process(buffer);
     }
     
     bool hasEditor() const override { return true; }
@@ -102,3 +127,4 @@ public:
 };
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ZUMBOAudioProcessor(); }
+
