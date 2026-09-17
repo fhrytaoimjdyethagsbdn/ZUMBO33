@@ -17,7 +17,7 @@ jobs:
     - name: Run actions/checkout@v4
       uses: actions/checkout@v4
 
-    # Αυτός είναι ο νέος, σωστός τρόπος για να κατεβάσουμε το JUCE χωρίς σφάλματα
+    # Κατέβασμα του JUCE
     - name: Download JUCE
       uses: actions/checkout@v4
       with:
@@ -25,9 +25,9 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Εδώ λέμε στο CMake πού βρίσκεται ο φάκελος JUCE_FRAMEWORK
+    # Εδώ προσθέσαμε την παράμετρο -DCMAKE_C_COMPILER=gcc για να διορθωθεί το σφάλμα
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK -DCMAKE_C_COMPILER=gcc
 
     - name: Build Project
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
