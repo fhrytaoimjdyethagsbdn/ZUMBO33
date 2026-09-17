@@ -33,13 +33,12 @@ public:
     
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override {
         juce::ScopedNoDenormals noDenormals; 
+        
+        // Ο συνθεσάιζερ παράγει κανονικά τον ήχο του χωρίς να κολλάει στα εφέ
         synth.renderNextBlock(buffer, midi, 0, buffer.getNumSamples());
-        engine.process(buffer, apvts);
     }
     
     bool hasEditor() const override { return true; }
-    
-    // Εδώ μπήκε η createEditor μόνη της και σωστά
     juce::AudioProcessorEditor* createEditor() override { return new juce::GenericAudioProcessorEditor(*this); }
     
     void getStateInformation(juce::MemoryBlock& dest) override { if(auto xml = apvts.copyState().createXml()) copyXmlToBinary(*xml, dest); }
