@@ -35,11 +35,11 @@ jobs:
         ref: master
         path: JUCE_FRAMEWORK
 
-    # Ρύθμιση του CMake με πλήρη καθαρισμό φακέλων (Fresh Build)
+    # Ρύθμιση του CMake με απενεργοποίηση του VST2 για να μην κολλάει το build
     - name: Configure CMake
       run: |
         rm -rf build
-        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DJUCE_PATH=${{ github.workspace }}/JUCE_FRAMEWORK -DJUCE_PLUGIN_HOST_VST2=0
         echo "juce_generate_juce_header(ZUMBO)" >> CMakeLists.txt
 
     - name: Build Project
@@ -47,3 +47,4 @@ jobs:
 
     - name: Test Project
       run: cd build && ctest -C ${{ env.BUILD_TYPE }}
+
